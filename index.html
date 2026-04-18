@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>رسالة لك</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Amiri+Quran&display=swap" rel="stylesheet">
+
+<style>
+body{
+  margin:0;
+  font-family:'Amiri Quran', serif;
+  background: linear-gradient(135deg,#14110f,#3b2f2a);
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  color:#fff;
+}
+
+#splash{
+  position:fixed;
+  width:100%;
+  height:100%;
+  background:#0f0c0a;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  z-index:10;
+}
+
+#splash h1{
+  color:#f5e6c8;
+}
+
+.card{
+  background: rgba(255,255,255,0.06);
+  padding:30px;
+  border-radius:25px;
+  max-width:750px;
+  backdrop-filter: blur(10px);
+  box-shadow:0 10px 40px rgba(0,0,0,0.5);
+}
+
+.title{
+  font-size:24px;
+  color:#f5e6c8;
+  margin-bottom:10px;
+}
+
+.meta{
+  font-size:15px;
+  color:#d7c7b2;
+  margin-bottom:10px;
+}
+
+.verse{
+  font-size:28px;
+  line-height:2;
+  margin:20px 0;
+}
+
+.tafsir{
+  font-size:16px;
+  color:#e6d7c3;
+  margin-top:15px;
+  line-height:1.8;
+}
+
+button{
+  margin-top:20px;
+  padding:12px 18px;
+  border:none;
+  border-radius:14px;
+  background:#8b5e3c;
+  color:white;
+  cursor:pointer;
+}
+button:hover{
+  background:#a06b45;
+}
+</style>
+</head>
+
+<body>
+
+<div id="splash">
+  <h1>📖 رسالة لك</h1>
+</div>
+
+<div class="card">
+  <div class="title">💌 آية من القرآن</div>
+
+  <div class="meta" id="meta">...</div>
+  <div class="verse" id="verse">...</div>
+
+  <div class="tafsir" id="tafsir"></div>
+
+  <button onclick="shareImage()">📲 مشاركة واتساب</button>
+</div>
+
+<canvas id="canvas" width="600" height="700" style="display:none;"></canvas>
+
+<script>
+
+async function getVerse(){
+  try{
+    const random = Math.floor(Math.random()*6236) + 1;
+
+    // الآية
+    const ayahRes = await fetch(`https://api.alquran.cloud/v1/ayah/${random}/ar.alafasy`);
+    const ayahData = await ayahRes.json();
+    const ayah = ayahData.data;
+
+    document.getElementById("verse").innerText = ayah.text;
+    document.getElementById("meta").innerText =
+      "سورة " + ayah.surah.name + " - الآية " + ayah.numberInSurah;
+
+    // التفسير العربي (الجلالين)
+    const tafsirRes = await fetch(`https://api.alquran.cloud/v1/ayah/${random}/ar.jalalayn`);
+    const tafsirData = await tafsirRes.json();
+
+    document.getElementById("tafsir").innerText =
+      "📖 التفسير: " + tafsirData.data.text;
+
+  } catch(e){
+    document.getElementById("verse").innerText = "حدث خطأ في التحميل";
+  }
+}
+
+getVerse();
+
+/* Splash */
+setTimeout(()=>{
+  document.getElementById("splash").style.display="none";
+},1500);
+
+/* صورة المشاركة */
+function generateImage(){
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+
+  const verse = document.getElementById("verse").innerText;
+  const meta = document.getElementById("meta").innerText;
+  const tafsir = document.getElementById("tafsir").innerText;
+
+  ctx.fillStyle = "#1c1613";
+  ctx.fillRect(0,0,600,700);
+
+  ctx.fillStyle = "#f5e6c8";
+  ctx.font = "18px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText("📖 رسالة من القرآن", 300, 100);
+
+  ctx.fillStyle = "#d7c7b2";
+  ctx.fillText(meta, 300, 160);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "24px Arial";
+  ctx.fillText(verse, 300, 280);
+
+  ctx.fillStyle = "#e6d7c3";
+  ctx.font = "14px Arial";
+
+  // تقسيم التفسير لو طويل
+  const lines = tafsir.match(/.{1,50}/g) || [];
+  let y = 380;
+  lines.slice(0,6).forEach(line=>{
+    ctx.fillText(line, 300, y);
+    y += 25;
+  });
+
+  return canvas.toDataURL("image/png");
+}
+
+/* مشاركة واتساب */
+function shareImage(){
+  const img = generateImage();
+
+  fetch(img)
+  .then(res=>res.blob())
+  .then(blob=>{
+    const file = new File([blob], "ayah.png", {type:"image/png"});
+
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      navigator.share({
+        files:[file],
+        title:"رسالة من القرآن"
+      });
+    } else {
+      const a = document.createElement("a");
+      a.href = img;
+      a.download = "ayah.png";
+      a.click();
+
+      alert("تم تحميل الصورة 📥 شاركها من المعرض");
+    }
+  });
+}
+
+</script>
+
+</body>
+</html>
